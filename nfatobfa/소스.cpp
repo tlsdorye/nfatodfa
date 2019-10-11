@@ -15,7 +15,8 @@ class DFA
 public:
 	vector<State> states;
 	int input_size;
-	vector<int> start_state, final_state;
+	vector<int> start_state;
+	vector<State> final_states;
 	map<pair<State, int>, State> mapping_function;
 
 	DFA() {};
@@ -23,6 +24,62 @@ public:
 	{
 		this->input_size = input_size;
 	}
+
+	void FindFinalState(State state, State n_final_state)
+	{
+		for (int i = 0; i < state.size(); i++)
+			for (int j = 0; j < n_final_state.size(); j++)
+				if (state[i] == n_final_state[j])
+				{
+					final_states.push_back(state);
+					return;
+				}
+	}
+
+	void PrintDFA()
+	{
+		cout << "\n\n\n STATES OF DFA :\t\t";
+		for (int i = 0; i < states.size(); i++)
+		{
+			for (int j = 0; j < states[i].size(); j++) cout << (char)(states[i][j] + 'A');
+			cout << ", ";
+		}
+		cout << "\n";
+
+		cout << "\n INPUT SYMBOLS :\t\t";
+		for (int i = 0; i < input_size; i++) cout << i << ", ";
+		cout << "\n";
+
+		cout << "\n START STATE :\t\t\t";
+		for (int i = 0; i < start_state.size(); i++) cout << (char)(start_state[i] + 'A');
+		cout << "\n";
+
+		cout << "\n FINAL STATES :\t\t\t";
+		for (int i = 0; i < final_states.size(); i++)
+		{
+			for (int j = 0; j < final_states[i].size(); j++) cout << (char)(final_states[i][j] + 'A');
+			cout << ", ";
+		}
+		cout << "\n";
+
+		cout << "\n DFA mapping function table \n\n\n";
+		cout << "STATES\t";
+		for (int i = 0; i < input_size; i++) cout << "| " << i << "\t";
+		cout << "\n--------+------------------------------------\n";
+		for (int i = 0; i < states.size(); i++)
+		{
+			for (int j = 0; j < states[i].size(); j++) cout << (char)(states[i][j] + 'A');
+			for (int j = 0; j < input_size; j++)
+			{
+				cout << "\t| ";
+				State next_state = mapping_function[{ states[i], j }];
+				for (int k = 0; k < next_state.size(); k++) cout << (char)(next_state[k] + 'A');
+			}
+			cout << "\n";
+		}
+			
+	}
+
 };
 
 class NFA
@@ -129,13 +186,15 @@ public:
 	DFA MakeDFA()
 	{
 		DFA dfa(input_size);
-		queue<vector<int>> que;
+		queue<State> que;
 		set<State> check;
 
-		State start_state = GetClosure(start_state);
-		que.push(start_state);
-		check.insert(start_state);
-		dfa.states.push_back(start_state);
+		State start_Dstate = GetClosure(start_state);
+		dfa.start_state = start_Dstate;
+		que.push(start_Dstate);
+		check.insert(start_Dstate);
+		dfa.states.push_back(start_Dstate);
+		dfa.FindFinalState(start_Dstate, final_states);
 
 		while (!que.empty())
 		{
@@ -144,15 +203,16 @@ public:
 			for (int i = 0; i < input_size; i++)
 			{
 				State new_state = Dtrans(curr_state, i);
-				if (check.find(new_state) == check.end()) continue;
+
+				dfa.mapping_function.insert({ { curr_state, i }, new_state });
+				if (check.find(new_state) != check.end()) continue;
 				que.push(new_state);
 				check.insert(new_state);
 				dfa.states.push_back(new_state);
-				dfa.mapping_function.insert({ { curr_state, i }, new_state });
-
+				dfa.FindFinalState(new_state, final_states);
 			}
-
 		}
+		return dfa;
 	}
 
 	void PrintNFA()
@@ -171,16 +231,16 @@ public:
 		for (int i = 0; i < final_states.size(); i++) cout << (char)(final_states[i] + 'A') << ", ";
 		cout << "\n";
 
-		cout << "\n NFA mapping function tale \n\n\n";
-		cout << "STATES\t|";
-		for (int i = 0; i < input_size; i++) cout << i << "\t|";
+		cout << "\n NFA mapping function table \n\n\n";
+		cout << "STATES\t| ";
+		for (int i = 0; i < input_size; i++) cout << i << "\t| ";
 		cout << "eps\n";
 		cout << "--------+------------------------------------\n";
 		for (int i = 0; i < state_size; i++)
 		{
 			cout << (char)(i + 'A');
 			for (int j = 0; j <= input_size; j++)
-				cout << "\t|" << mapping_function[i][j];
+				cout << "\t| " << mapping_function[i][j];
 			cout << "\n";
 		}
 	}
@@ -227,8 +287,6 @@ int main()
 	nfa.GetAllClosure();
 	nfa.PrintClosure();
 
-
-	State new_state = nfa.Dtrans(nfa.GetClosure(0), 1);
-	for (int i = 0; i < new_state.size(); i++) cout << (char)(new_state[i] + 'A') << " ";
-	cout << "\n";
+	DFA dfa = nfa.MakeDFA();
+	dfa.PrintDFA();
 }
