@@ -26,7 +26,7 @@ public:
 		this->final_states = final_states;
 	}
 
-	void getClosures()
+	void GetAllClosure()
 	{
 		for (int i = 0; i < state_size; i++)
 		{
@@ -55,6 +55,49 @@ public:
 			sort(closures.begin(), closures.end());
 			e_closures.push_back(closures);
 		}
+	}
+
+	vector<int> getClosure(int idx)
+	{
+		return e_closures[idx];
+	}
+
+	vector<int> getClosure(vector<int> states)
+	{
+		vector<int> check(state_size, 0), next_state;
+		for (int i = 0; i < states.size(); i++)
+		{
+			vector<int> closure = getClosure(states[i]);
+			for (int j = 0; j < closure.size(); j++) check[closure[j]] = 1;
+		}
+		for (int i = 0; i < check.size(); i++)
+			if (check[i] == 1) next_state.push_back(i);
+		return next_state;
+	}
+
+	vector<int> move(int state, int input)
+	{
+		vector<int> next_states;
+		string next = mapping_function[state][input];
+
+		if (next == "-") return next_states;
+		for (int i = 0; i < next.size(); i++)
+			next_states.push_back((int)(next[i] - 'A'));
+		return next_states;
+
+	}
+
+	vector<int> move(vector<int> states, int input)
+	{
+		vector<int> check(state_size, 0), next_state;
+		for (int i = 0; i < states.size(); i++)
+		{
+			vector<int> temp = move(states[i], input);
+			for (int j = 0; j < temp.size(); j++) check[temp[j]] = 1;
+		}
+		for (int i = 0; i < check.size(); i++) 
+			if (check[i] == 1) next_state.push_back(i);
+		return next_state;
 	}
 
 	void PrintNFA()
@@ -126,6 +169,12 @@ int main()
 	
 	NFA nfa(state_size, input_size, (int)(start_state-'A'),mapping_function, final_states);
 	nfa.PrintNFA();
-	nfa.getClosures();
+	nfa.GetAllClosure();
 	nfa.PrintClosure();
+	
+
+	vector<int> Aclosure = nfa.getClosure(0);
+	vector<int> next_state = nfa.getClosure(nfa.move(nfa.getClosure(0), 0));
+	for (int i = 0; i < next_state.size(); i++) cout << (char)(next_state[i] + 'A') << " ";
+	cout << "\n";
 }
