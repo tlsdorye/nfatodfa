@@ -38,7 +38,13 @@ public:
 
 	void PrintDFA()
 	{
-		cout << "\n\n\n STATES OF DFA :\t\t";
+		cout << "\n\n";
+		cout << "-------------------+---+--------------------\n";
+		cout << "################### DFA ####################\n";
+		cout << "-------------------+---+--------------------\n";
+		cout << "\n";
+
+		cout << "\n STATES OF DFA :\t\t";
 		for (int i = 0; i < states.size(); i++)
 		{
 			for (int j = 0; j < states[i].size(); j++) cout << (char)(states[i][j] + 'A');
@@ -62,7 +68,7 @@ public:
 		}
 		cout << "\n";
 
-		cout << "\n DFA mapping function table \n\n\n";
+		cout << "\n\n DFA TRANSITION TABLE \n\n";
 		cout << "STATES\t";
 		for (int i = 0; i < input_size; i++) cout << "| " << i << "\t";
 		cout << "\n--------+------------------------------------\n";
@@ -75,7 +81,7 @@ public:
 				State next_state = mapping_function[{ states[i], j }];
 				for (int k = 0; k < next_state.size(); k++) cout << (char)(next_state[k] + 'A');
 			}
-			cout << "\n";
+			cout << "\n\n";
 		}
 			
 	}
@@ -217,6 +223,12 @@ public:
 
 	void PrintNFA()
 	{
+		cout << "\n\n";
+		cout << "-------------------+---+--------------------\n";
+		cout << "################### NFA ####################\n";
+		cout << "-------------------+---+--------------------\n";
+		cout << "\n";
+
 		cout << "\n STATES OF NFA :\t\t";
 		for (int i = 0; i < state_size; i++) cout << (char)(i + 'A') << ", ";
 		cout << "\n";
@@ -231,7 +243,7 @@ public:
 		for (int i = 0; i < final_states.size(); i++) cout << (char)(final_states[i] + 'A') << ", ";
 		cout << "\n";
 
-		cout << "\n NFA mapping function table \n\n\n";
+		cout << "\n\n NFA TRANSITION TABLE \n\n";
 		cout << "STATES\t| ";
 		for (int i = 0; i < input_size; i++) cout << i << "\t| ";
 		cout << "eps\n";
@@ -258,35 +270,38 @@ public:
 
 int main()
 {
-	int state_size, input_size, final_states_size;
-	char start_state, temp;
-	vector<vector<string>> mapping_function;
-	State final_states;
-
-	cin >> state_size >> input_size >> start_state >> final_states_size;
-	for (int i = 0; i < final_states_size; i++)
+	while (true)
 	{
-		cin >> temp;
-		final_states.push_back((int)(temp - 'A'));
-	}
+		int state_size, input_size, final_states_size;
+		char start_state, temp;
+		vector<vector<string>> mapping_function;
+		State final_states;
 
-	for (int i = 0; i < state_size; i++)
-	{
-		string temp;
-		mapping_function.push_back(vector<string>());
-		for (int j = 0; j <= input_size; j++)
+		cin >> state_size >> input_size >> start_state >> final_states_size;
+		for (int i = 0; i < final_states_size; i++)
 		{
 			cin >> temp;
-			mapping_function[i].push_back(temp);
+			final_states.push_back((int)(temp - 'A'));
 		}
+
+		for (int i = 0; i < state_size; i++)
+		{
+			string temp;
+			mapping_function.push_back(vector<string>());
+			for (int j = 0; j <= input_size; j++)
+			{
+				cin >> temp;
+				mapping_function[i].push_back(temp);
+			}
+		}
+
+
+		NFA nfa(state_size, input_size, (int)(start_state - 'A'), mapping_function, final_states);
+		nfa.PrintNFA();
+		nfa.GetAllClosure();
+		nfa.PrintClosure();
+
+		DFA dfa = nfa.MakeDFA();
+		dfa.PrintDFA();
 	}
-
-
-	NFA nfa(state_size, input_size, (int)(start_state - 'A'), mapping_function, final_states);
-	nfa.PrintNFA();
-	nfa.GetAllClosure();
-	nfa.PrintClosure();
-
-	DFA dfa = nfa.MakeDFA();
-	dfa.PrintDFA();
 }
