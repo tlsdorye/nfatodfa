@@ -131,55 +131,89 @@ public:
 		}
 	}
 
+	bool Partitioning(map<int, int> &state_to_group_idx, int groups_size, vector<int> &group)
+	{
+		bool ret = false;
+		vector<int> result(input_size, 0), change_state;
+		for (int i = 0; i < input_size; i++)
+			result[i] = state_to_group_idx[mapping_function[group[0]][i]];
+			
+		for (auto state : group)
+			for (int input = 0; input < input_size; input++)
+			{
+				if (result[input] != state_to_group_idx[mapping_function[state][input]])
+				{
+					change_state.push_back(state);
+					break;
+				}
+			}
+
+		if (change_state.size() != 0) ret = true;
+		for (int i = 0; i < change_state.size(); i++)
+			state_to_group_idx[change_state[i]] = groups_size;
+		return ret;
+	}
+
 	DFA StateOptimization()
 	{
-		vector<int> group(state_size, 0), copy_group;
-		vector<vector<int>> table(state_size, vector<int>(input_size, 0));
-
-		for (int i = 0; i < state_size; i++) group[i] = 0;
-		for (int i = 0; i < final_states.size(); i++) group[final_states[i]] = 1;
-		
-		int idx = 1;
-		while (group != copy_group)
+		DFA mdfa;
+		if (final_states.size() == state_size)
 		{
-			copy_group.assign(group.begin(), group.end());
+			mdfa.state_size = 1;
+			mdfa.input_size = input_size;
+			mdfa.start_state = 0;
+			mdfa.final_states.push_back(0);
+			mdfa.mapping_function.resize(1, vector<int>(input_size, 0));
+			for (int i = 0; i < input_size; i++) mdfa.mapping_function[0][i] = 0;
+			mdfa.isopt = true;
+			return mdfa;
+		}
 
-			for (int state = 0; state < state_size; state++)
-				for (int input = 0; input < input_size; input++)
-					table[state][input] = group[mapping_function[state][input]];
+		int groups_size = 2;
+		vector<vector<int>> groups(groups_size, vector<int>()), prev_groups;
+		vector<int> check(state_size, 0);
+		map<int, int> state_to_group_idx;
+		for (int i = 0; i < final_states.size(); i++) check[final_states[i]] = 1;
+		for (int i = 0; i < check.size(); i++)
+		{
+			groups[check[i]].push_back(i);
+			state_to_group_idx.insert({ i, check[i] });
+		}
+		state_to_group_idx.insert({ -20, -20 });
 
-			vector<bool> check(state_size, false);
-			idx = 0;
-			for (int i = 0; i < state_size; i++)
+		while (groups != prev_groups)
+		{
+			prev_groups = groups;
+			for (auto group : groups)
 			{
-				if (check[i]) continue;
-				group[i] = idx;
-				for (int j = i + 1; j < state_size; j++)
-					if (table[i] == table[j])
-					{
-						group[j] = idx;
-						check[j] = true;
-					}
-				idx++;
+				if (Partitioning(state_to_group_idx, groups_size, group))
+				{
+					groups_size++;
+					groups.clear();
+					groups.resize(groups_size, vector<int>());
+					for (int state = 0; state < state_size; state++)
+						groups[state_to_group_idx[state]].push_back(state);
+					break;
+				}
 			}
 		}
-		DFA mdfa;
-		mdfa.state_size = idx;
-		mdfa.input_size = input_size;
-		mdfa.start_state = group[start_state];
-		
-		vector<bool> check(idx, 0);
-		for (int i = 0; i < final_states.size(); i++)
-			check[group[final_states[i]]] = true;
-		for (int i = 0; i < check.size(); i++)
-			if (check[i]) mdfa.final_states.push_back(i);
 
-		mdfa.mapping_function.resize(idx, vector<int>(idx, 0));
+		mdfa.state_size = groups_size;
+		mdfa.input_size = input_size;
+		mdfa.start_state = state_to_group_idx[start_state];
+
+		check.resize(groups_size, 0);
+		for (int i = 0; i < final_states.size(); i++)
+			check[state_to_group_idx[final_states[i]]] = 1;
+		for (int i = 0; i < check.size(); i++)
+			if (check[i] == 1) mdfa.final_states.push_back(i);
+
+		mdfa.mapping_function.resize(groups_size, vector<int>(input_size, 0));
 		for (int state = 0; state < state_size; state++)
 		{
-			int curr_state = group[state];
+			int curr_state = state_to_group_idx[state];
 			for (int input = 0; input < input_size; input++)
-				mdfa.mapping_function[curr_state][input] = group[mapping_function[state][input]];
+				mdfa.mapping_function[curr_state][input] = state_to_group_idx[mapping_function[state][input]];
 		}
 		mdfa.isopt = true;
 		return mdfa;
@@ -455,7 +489,7 @@ int main()
 		cdfa.PrintConvertDFA();
 
 		DFA dfa(cdfa);
-		//dfa.PrintDFA();
+		dfa.PrintDFA();
 
 		DFA mdfa = dfa.StateOptimization();
 		mdfa.PrintDFA();
