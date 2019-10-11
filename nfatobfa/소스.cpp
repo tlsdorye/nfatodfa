@@ -202,6 +202,7 @@ public:
 		mdfa.input_size = input_size;
 		mdfa.start_state = state_to_group_idx[start_state];
 
+		check.clear();
 		check.resize(groups_size, 0);
 		for (int i = 0; i < final_states.size(); i++)
 			check[state_to_group_idx[final_states[i]]] = 1;
