@@ -40,9 +40,9 @@ public:
 	void PrintConvertDFA()
 	{
 		cout << "\n\n";
-		cout << "-------------------+-----------+--------------------\n";
-		cout << "################### CONVERT DFA ####################\n";
-		cout << "-------------------+-----------+--------------------\n";
+		cout << "-------------------+-----------+---------------------\n";
+		cout << "################### CONVERT DFA #####################\n";
+		cout << "-------------------+-----------+---------------------\n";
 		cout << "\n";
 
 		cout << "\n STATES OF DFA :\t\t";
@@ -100,6 +100,7 @@ public:
 	int state_size, input_size, start_state;
 	State final_states;
 	vector<vector<int>> mapping_function;
+	bool isopt = false;
 
 	DFA() {};
 
@@ -130,12 +131,76 @@ public:
 		}
 	}
 
+	DFA StateOptimization()
+	{
+		vector<int> group(state_size, 0), copy_group;
+		vector<vector<int>> table(state_size, vector<int>(input_size, 0));
+
+		for (int i = 0; i < state_size; i++) group[i] = 0;
+		for (int i = 0; i < final_states.size(); i++) group[final_states[i]] = 1;
+		
+		int idx = 1;
+		while (group != copy_group)
+		{
+			copy_group.assign(group.begin(), group.end());
+
+			for (int state = 0; state < state_size; state++)
+				for (int input = 0; input < input_size; input++)
+					table[state][input] = group[mapping_function[state][input]];
+
+			vector<bool> check(state_size, false);
+			idx = 0;
+			for (int i = 0; i < state_size; i++)
+			{
+				if (check[i]) continue;
+				group[i] = idx;
+				for (int j = i + 1; j < state_size; j++)
+					if (table[i] == table[j])
+					{
+						group[j] = idx;
+						check[j] = true;
+					}
+				idx++;
+			}
+		}
+		DFA mdfa;
+		mdfa.state_size = idx;
+		mdfa.input_size = input_size;
+		mdfa.start_state = group[start_state];
+		
+		vector<bool> check(idx, 0);
+		for (int i = 0; i < final_states.size(); i++)
+			check[group[final_states[i]]] = true;
+		for (int i = 0; i < check.size(); i++)
+			if (check[i]) mdfa.final_states.push_back(i);
+
+		mdfa.mapping_function.resize(idx, vector<int>(idx, 0));
+		for (int state = 0; state < state_size; state++)
+		{
+			int curr_state = group[state];
+			for (int input = 0; input < input_size; input++)
+				mdfa.mapping_function[curr_state][input] = group[mapping_function[state][input]];
+		}
+		mdfa.isopt = true;
+		return mdfa;
+	}
+
 	void PrintDFA()
 	{
 		cout << "\n\n";
-		cout << "------------------------+---+-----------------------\n";
-		cout << "######################## DFA #######################\n";
-		cout << "------------------------+---+-----------------------\n";
+		
+		if (!isopt)
+		{
+			cout << "------------------------+---+------------------------\n";
+			cout << "######################## DFA ########################\n";
+			cout << "------------------------+---+------------------------\n";
+		}
+		else
+		{
+			cout << "----------------+-------------------+---------------\n";
+			cout << "################ OPTIMIZATION OF DFA ################\n";
+			cout << "----------------+-------------------+---------------\n";
+		}
 		cout << "\n";
 
 		cout << "\n STATES OF NFA :\t\t";
@@ -309,9 +374,9 @@ public:
 	void PrintNFA()
 	{
 		cout << "\n\n";
-		cout << "------------------------+---+-----------------------\n";
-		cout << "######################## NFA #######################\n";
-		cout << "------------------------+---+-----------------------\n";
+		cout << "------------------------+---+------------------------\n";
+		cout << "######################## NFA ########################\n";
+		cout << "------------------------+---+------------------------\n";
 		cout << "\n";
 
 		cout << "\n STATES OF NFA :\t\t";
@@ -390,6 +455,9 @@ int main()
 		cdfa.PrintConvertDFA();
 
 		DFA dfa(cdfa);
-		dfa.PrintDFA();
+		//dfa.PrintDFA();
+
+		DFA mdfa = dfa.StateOptimization();
+		mdfa.PrintDFA();
 	}
 }
