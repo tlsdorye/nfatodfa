@@ -2,9 +2,28 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <set>
+#include <map>
+#include <utility>
 #include <algorithm>
 
 using namespace std;
+typedef vector<int> State;
+
+class DFA
+{
+public:
+	vector<State> states;
+	int input_size;
+	vector<int> start_state, final_state;
+	map<pair<State, int>, State> mapping_function;
+
+	DFA() {};
+	DFA(int input_size)
+	{
+		this->input_size = input_size;
+	}
+};
 
 class NFA
 {
@@ -13,11 +32,11 @@ public:
 	int input_size;
 	int start_state;
 	vector<vector<string>> mapping_function;
-	vector<int> final_states;
-	vector<vector<int>> e_closures;
+	State final_states;
+	vector<State> e_closures;
 
 	NFA() {};
-	NFA(int state_size, int input_size, int start_state, vector<vector<string>> mapping_function, vector<int> final_states)
+	NFA(int state_size, int input_size, int start_state, vector<vector<string>> mapping_function, State final_states)
 	{
 		this->state_size = state_size;
 		this->input_size = input_size;
@@ -30,10 +49,10 @@ public:
 	{
 		for (int i = 0; i < state_size; i++)
 		{
-			vector<int> closures;
+			State closures;
 			queue<int> que;
 			vector<bool> visit(state_size, false);
-			
+
 			que.push(i);
 			visit[i] = true;
 			while (!que.empty())
@@ -57,17 +76,18 @@ public:
 		}
 	}
 
-	vector<int> getClosure(int idx)
+	State GetClosure(int idx)
 	{
 		return e_closures[idx];
 	}
 
-	vector<int> getClosure(vector<int> states)
+	State GetClosure(vector<int> states)
 	{
-		vector<int> check(state_size, 0), next_state;
+		State next_state;
+		vector<int> check(state_size, 0);
 		for (int i = 0; i < states.size(); i++)
 		{
-			vector<int> closure = getClosure(states[i]);
+			vector<int> closure = GetClosure(states[i]);
 			for (int j = 0; j < closure.size(); j++) check[closure[j]] = 1;
 		}
 		for (int i = 0; i < check.size(); i++)
@@ -75,9 +95,9 @@ public:
 		return next_state;
 	}
 
-	vector<int> move(int state, int input)
+	State Move(int state, int input)
 	{
-		vector<int> next_states;
+		State next_states;
 		string next = mapping_function[state][input];
 
 		if (next == "-") return next_states;
@@ -87,17 +107,52 @@ public:
 
 	}
 
-	vector<int> move(vector<int> states, int input)
+	State Move(vector<int> states, int input)
 	{
-		vector<int> check(state_size, 0), next_state;
+		State next_state;
+		vector<int> check(state_size, 0);
 		for (int i = 0; i < states.size(); i++)
 		{
-			vector<int> temp = move(states[i], input);
+			vector<int> temp = Move(states[i], input);
 			for (int j = 0; j < temp.size(); j++) check[temp[j]] = 1;
 		}
-		for (int i = 0; i < check.size(); i++) 
+		for (int i = 0; i < check.size(); i++)
 			if (check[i] == 1) next_state.push_back(i);
 		return next_state;
+	}
+
+	State Dtrans(vector<int> state, int input)
+	{
+		return GetClosure(Move(state, input));
+	}
+
+	DFA MakeDFA()
+	{
+		DFA dfa(input_size);
+		queue<vector<int>> que;
+		set<State> check;
+
+		State start_state = GetClosure(start_state);
+		que.push(start_state);
+		check.insert(start_state);
+		dfa.states.push_back(start_state);
+
+		while (!que.empty())
+		{
+			State curr_state = que.front();
+			que.pop();
+			for (int i = 0; i < input_size; i++)
+			{
+				State new_state = Dtrans(curr_state, i);
+				if (check.find(new_state) == check.end()) continue;
+				que.push(new_state);
+				check.insert(new_state);
+				dfa.states.push_back(new_state);
+				dfa.mapping_function.insert({ { curr_state, i }, new_state });
+
+			}
+
+		}
 	}
 
 	void PrintNFA()
@@ -146,13 +201,13 @@ int main()
 	int state_size, input_size, final_states_size;
 	char start_state, temp;
 	vector<vector<string>> mapping_function;
-	vector<int> final_states;
+	State final_states;
 
 	cin >> state_size >> input_size >> start_state >> final_states_size;
 	for (int i = 0; i < final_states_size; i++)
 	{
 		cin >> temp;
-		final_states.push_back((int)(temp-'A'));
+		final_states.push_back((int)(temp - 'A'));
 	}
 
 	for (int i = 0; i < state_size; i++)
@@ -166,15 +221,14 @@ int main()
 		}
 	}
 
-	
-	NFA nfa(state_size, input_size, (int)(start_state-'A'),mapping_function, final_states);
+
+	NFA nfa(state_size, input_size, (int)(start_state - 'A'), mapping_function, final_states);
 	nfa.PrintNFA();
 	nfa.GetAllClosure();
 	nfa.PrintClosure();
-	
 
-	vector<int> Aclosure = nfa.getClosure(0);
-	vector<int> next_state = nfa.getClosure(nfa.move(nfa.getClosure(0), 0));
-	for (int i = 0; i < next_state.size(); i++) cout << (char)(next_state[i] + 'A') << " ";
+
+	State new_state = nfa.Dtrans(nfa.GetClosure(0), 1);
+	for (int i = 0; i < new_state.size(); i++) cout << (char)(new_state[i] + 'A') << " ";
 	cout << "\n";
 }
